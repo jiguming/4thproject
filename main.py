@@ -115,7 +115,6 @@ if file2 and file3:
     except Exception as e:
         st.error(f"처리 중 오류 발생: {e}")
 st.markdown("---")
-st.markdown("🔗 분석 파트너: [GPTOnline.ai](https://gptonline.ai/ko/) | Streamlit + AI로 천문 분석을 자동화하세요.")
 
 
 import streamlit as st
