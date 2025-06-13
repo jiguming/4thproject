@@ -1,10 +1,11 @@
 import streamlit as st
 from astropy.io import fits
+from astropy.wcs import WCS
 import numpy as np
 import requests
 from io import BytesIO
 
-st.title("🌌 GitHub FITS.FZ 파일 - 모든 HDU 탐색")
+st.title("🔭 FITS 이미지 및 WCS 시각화 (HDU 1 기준)")
 
 # GitHub raw URL
 url = "https://raw.githubusercontent.com/jiguming/4thproject/main/k21i_100108_031209_ori.fits.fz"
@@ -14,23 +15,31 @@ try:
     response.raise_for_status()
 
     with fits.open(BytesIO(response.content)) as hdul:
-        st.write("📁 HDU 구조:")
-        st.text(hdul.info())
+        hdu = hdul[1]  # ← 실제 이미지가 있는 HDU 번호로 바꿔야 함
 
-        found = False
-        for i, hdu in enumerate(hdul):
-            data = hdu.data
-            if data is not None and data.ndim == 2:
-                st.subheader(f"🖼 HDU {i} - 2D 이미지 데이터")
-                # 데이터 정규화 후 시각화
-                norm_data = (data - np.min(data)) / (np.max(data) - np.min(data))
-                st.image(norm_data, caption=f"HDU {i}", use_column_width=True, clamp=True)
+        data = hdu.data
+        header = hdu.header
 
-                st.subheader(f"🧾 HDU {i} 헤더")
-                st.text(str(hdu.header))
-                found = True
+        st.subheader("🧾 헤더")
+        st.text(str(header))
 
-        if not found:
-            st.warning("⚠️ 시각화 가능한 2차원 이미지가 포함된 HDU가 없습니다.")
+        if data is not None and data.ndim == 2:
+            st.subheader("🖼 이미지 시각화")
+            # 이미지 정규화
+            norm = (data - np.min(data)) / (np.max(data) - np.min(data))
+            st.image(norm, use_column_width=True, clamp=True)
+
+            # WCS 시도
+            try:
+                wcs = WCS(header)
+                if wcs.has_celestial:
+                    st.success("🌐 WCS (World Coordinate System) 정보가 포함되어 있음!")
+                    st.code(wcs.to_header_string(), language="fits")
+                else:
+                    st.info("WCS 좌표 정보는 포함되어 있지 않음.")
+            except Exception as wcs_err:
+                st.warning(f"WCS 파싱 중 오류 발생: {wcs_err}")
+        else:
+            st.warning("⚠️ HDU에 2차원 데이터가 없습니다.")
 except Exception as e:
     st.error(f"❌ 오류 발생: {e}")
