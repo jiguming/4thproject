@@ -92,8 +92,8 @@ if tab_choice == "별 밝기 분석":
 # 2. 소광 계수 분석
 # -------------------------------------
 elif tab_choice == "소광 계수":
-    file2 = st.sidebar.file_uploader("FITS 파일 1 (낮은 AIRMASS)", type=["fits"], key="file2")
-    file3 = st.sidebar.file_uploader("FITS 파일 2 (높은 AIRMASS)", type=["fits"], key="file3")
+    file2 = st.sidebar.file_uploader("FITS 파일 1 (낮은 AIRMASS)", type=["fits", "fz"], key="file2")
+    file3 = st.sidebar.file_uploader("FITS 파일 2 (높은 AIRMASS)", type=["fits", "fz"], key="file3")
 
     def process_file(fits_file):
         hdul = fits.open(fits_file)
@@ -104,6 +104,9 @@ elif tab_choice == "소광 계수":
                 header = hdu.header
                 break
         hdul.close()
+
+        if data is None or header is None:
+            raise ValueError("이미지 데이터 또는 헤더 정보를 읽을 수 없습니다.")
 
         ra = header.get("RA")
         dec = header.get("DEC")
@@ -122,6 +125,7 @@ elif tab_choice == "소광 계수":
         sources = daofind(data)
         if sources is None or len(sources) == 0:
             raise ValueError("별을 탐지하지 못했습니다.")
+
         brightest = sources[np.argmax(sources['flux'])]
         position = (brightest['xcentroid'], brightest['ycentroid'])
         aperture = CircularAperture(position, r=5.)
