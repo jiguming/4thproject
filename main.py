@@ -1,33 +1,34 @@
 import streamlit as st
 from astropy.io import fits
 import numpy as np
-import matplotlib.pyplot as plt
+import requests
+from io import BytesIO
 
-st.title("FITS 파일 분석 도구")
+st.title("🌌 GitHub에서 FITS.FZ 파일 불러오기")
 
-# 파일 업로드
-uploaded_file = st.file_uploader("FITS 파일 (.fits 또는 .fits.fz)을 업로드하세요", type=["fits", "fz"])
+# URL 고정 (혹은 st.text_input으로 입력 가능)
+url = "https://raw.githubusercontent.com/jiguming/4thproject/main/k21i_100108_031209_ori.fits.fz"
 
-if uploaded_file is not None:
-    with fits.open(uploaded_file) as hdul:
-        st.write("📁 파일 구조 (HDU 리스트):")
-        hdul.info()
+try:
+    response = requests.get(url)
+    response.raise_for_status()
 
-        # 첫 번째 HDU 선택
+    with fits.open(BytesIO(response.content)) as hdul:
+        st.write("📁 HDU 구조:")
+        st.text(hdul.info())
+
         hdu = hdul[0]
         header = hdu.header
         data = hdu.data
 
-        st.subheader("🧾 헤더 정보")
-        st.text(header)
+        st.subheader("🧾 헤더")
+        st.text(str(header))
 
-        if data is not None:
-            st.subheader("🖼 데이터 미리보기")
-            if data.ndim == 2:
-                fig, ax = plt.subplots()
-                ax.imshow(data, cmap='gray', origin='lower')
-                st.pyplot(fig)
-            else:
-                st.write(f"데이터 차원: {data.shape} (시각화 불가)")
+        if data is not None and data.ndim == 2:
+            # 이미지 정규화
+            data_norm = (data - np.min(data)) / (np.max(data) - np.min(data))
+            st.image(data_norm, caption="FITS 이미지", use_column_width=True, clamp=True)
         else:
-            st.warning("데이터가 포함되지 않은 HDU입니다.")
+            st.warning("2차원 이미지 데이터가 아닙니다.")
+except Exception as e:
+    st.error(f"❌ 오류 발생: {e}")
