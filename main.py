@@ -215,7 +215,7 @@ def temperature_to_rgb(temp):
     elif temp < 5200:
         return (1.0, 0.7, 0.4)  # Orange
     elif temp < 6000:
-        return (1.0, 1.0, 0.6)  # Yellowish
+        return (1.0, 1.0, 0.6)  # Yellow
     elif temp < 7500:
         return (1.0, 1.0, 1.0)  # White
     else:
@@ -223,12 +223,11 @@ def temperature_to_rgb(temp):
 
 def show_colored_star(data, position, temperature):
     rgb_color = temperature_to_rgb(temperature)
-    
+
     fig, ax = plt.subplots()
     ax.imshow(data, cmap='gray', origin='lower',
               vmin=np.percentile(data, 5), vmax=np.percentile(data, 99))
     ax.plot(position[0], position[1], marker='o', markersize=15,
             markerfacecolor=rgb_color, markeredgecolor='white', markeredgewidth=1.5)
-    ax.set_title(f\"별 위치 및 색상 (T={temperature:.0f}K)\")
+    ax.set_title(f"별 위치 및 색상 (T={temperature:.0f}K)")
     st.pyplot(fig)
-
