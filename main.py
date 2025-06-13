@@ -143,35 +143,30 @@ from astropy.io import fits
 from astropy.stats import mad_std
 from photutils.detection import DAOStarFinder
 from photutils.aperture import CircularAperture, aperture_photometry
-from scipy.stats import linregress
 
 # 기본 설정
-st.title("별의 물리량 분석 앱 🌟")
-st.markdown("FITS 이미지에서 밝기 데이터를 추출하여 별의 물리량을 추정합니다.")
+st.title("별의 물리량 분석 앱 🌟 (u-band 기반)")
+st.markdown("u-band FITS 이미지에서 밝기 데이터를 추출하여 별의 물리량을 추정합니다.")
 
-# 별 물리량 추정 함수
-def estimate_star_properties(mag_b, mag_v, distance_pc, extinction=0.0):
-    color_index = mag_b - mag_v
-    temperature = 7100 / (color_index + 0.92)
-    mag_v_corrected = mag_v - extinction
-    abs_mag = mag_v_corrected - 5 * np.log10(distance_pc / 10)
+# 별 물리량 추정 함수 (단일 u-band 기준)
+def estimate_star_properties_u_band(mag_u, distance_pc, extinction=0.0):
+    abs_mag = mag_u - extinction - 5 * np.log10(distance_pc / 10)
     luminosity = 10**(-0.4 * (abs_mag - 4.83))
+    temperature = 5778 * (luminosity ** 0.25)  # 단순 가정: 태양 유사
     mass = luminosity ** (1/3.5)
     radius = np.sqrt(luminosity) * (5778 / temperature)**2
     return {
-        "Color Index (B-V)": color_index,
-        "Effective Temperature (K)": temperature,
-        "Absolute Magnitude": abs_mag,
+        "Absolute Magnitude (u-band)": abs_mag,
         "Luminosity (L\u2609)": luminosity,
+        "Estimated Temperature (K)": temperature,
         "Mass (M\u2609)": mass,
         "Radius (R\u2609)": radius
     }
 
 # 사용자 입력
-file_b = st.file_uploader("B-band FITS 이미지 업로드", type=["fits"], key="b")
-file_v = st.file_uploader("V-band FITS 이미지 업로드", type=["fits"], key="v")
+file_u = st.file_uploader("u-band FITS 이미지 업로드", type=["fits"], key="u")
 distance = st.number_input("별까지 거리 (parsec)", min_value=1.0, value=1000.0)
-extinction = st.number_input("소광 계수 (A_v)", min_value=0.0, value=0.3)
+extinction = st.number_input("소광 계수 (A_u)", min_value=0.0, value=0.3)
 
 # 이미지에서 flux 추출 함수
 def extract_flux(fits_file):
@@ -197,24 +192,19 @@ def extract_flux(fits_file):
     phot = aperture_photometry(data, aperture)
     return phot[0]['aperture_sum']
 
-if file_b and file_v:
+if file_u:
     try:
-        flux_b = extract_flux(file_b)
-        flux_v = extract_flux(file_v)
+        flux_u = extract_flux(file_u)
+        mag_u = -2.5 * np.log10(flux_u)
 
-        mag_b = -2.5 * np.log10(flux_b)
-        mag_v = -2.5 * np.log10(flux_v)
-
-        result = estimate_star_properties(mag_b, mag_v, distance, extinction)
+        result = estimate_star_properties_u_band(mag_u, distance, extinction)
 
         st.subheader("⭐ 분석 결과")
         for k, v in result.items():
             st.write(f"{k}: {v:.3f}")
 
         st.subheader("🔭 밝기 정보")
-        st.write(f"B-band Flux: {flux_b:.2f} → Magnitude: {mag_b:.3f}")
-        st.write(f"V-band Flux: {flux_v:.2f} → Magnitude: {mag_v:.3f}")
+        st.write(f"u-band Flux: {flux_u:.2f} → Magnitude: {mag_u:.3f}")
 
     except Exception as e:
         st.error(f"처리 중 오류 발생: {e}")
-
