@@ -11,7 +11,7 @@ import astropy.units as u
 from astropy.coordinates import EarthLocation
 from scipy.stats import linregress
 location = EarthLocation(lat=31.9584 * u.deg, lon=-111.5967 * u.deg, height=2120 * u.m)
-st.title("천문 이미지 분석 앱 - GPTOnline.ai")
+st.title("천문 이미지 분석 앱 🌟")
 st.markdown("FITS 파일 3개를 업로드하여 별 밝기 측정, 회귀 분석 및 대기 소광 계수를 계산합니다.")
 # -------- 1. 첫 번째 파일 (단일 분석용) --------
 st.header("1. 별 탐지 및 회귀 분석용 FITS 파일")
