@@ -1,36 +1,55 @@
 import streamlit as st
 from astropy.io import fits
+import matplotlib.pyplot as plt
 import numpy as np
-import requests
-from io import BytesIO
+import gzip
+import shutil
+import os
 
-st.title("🌌 GitHub에서 FITS.FZ 파일 불러오기 및 시각화")
+st.title("FITS 파일 뷰어 🛰️")
 
-# 고정된 GitHub raw URL
-url = "https://raw.githubusercontent.com/jiguming/4thproject/main/kwb_190326_032609_ori.fits.fz"
+# 파일 업로드
+uploaded_file = st.file_uploader("FITS 파일(.fits, .fits.fz) 업로드", type=["fits", "fz"])
 
-try:
-    response = requests.get(url)
-    response.raise_for_status()
+if uploaded_file is not None:
+    # 저장 경로 설정
+    temp_path = "temp_file.fits"
 
-    with fits.open(BytesIO(response.content)) as hdul:
-        st.write("📁 HDU 구조:")
-        st.text(hdul.info())
+    # fz 확장자면 압축 해제
+    if uploaded_file.name.endswith(".fz"):
+        with open("temp_file.fits.fz", "wb") as f_out:
+            f_out.write(uploaded_file.read())
+        with gzip.open("temp_file.fits.fz", "rb") as f_in:
+            with open(temp_path, "wb") as f_out:
+                shutil.copyfileobj(f_in, f_out)
+        os.remove("temp_file.fits.fz")
+    else:
+        with open(temp_path, "wb") as f:
+            f.write(uploaded_file.read())
 
-        found = False
-        for i, hdu in enumerate(hdul):
-            data = hdu.data
-            if data is not None and data.ndim == 2:
-                st.subheader(f"🖼 HDU {i} - 2차원 이미지")
-                # 이미지 정규화
-                norm_data = (data - np.min(data)) / (np.max(data) - np.min(data))
-                st.image(norm_data, caption=f"HDU {i}", use_column_width=True, clamp=True)
+    # FITS 파일 열기
+    try:
+        with fits.open(temp_path) as hdul:
+            st.subheader("📋 헤더 정보")
+            st.text(hdul[0].header)
 
-                st.subheader(f"🧾 HDU {i} 헤더")
-                st.text(str(hdu.header))
-                found = True
+            # 이미지 데이터가 있으면 시각화
+            if hdul[0].data is not None:
+                st.subheader("🖼 이미지 데이터 시각화")
+                data = hdul[0].data
+                if data.ndim == 2:
+                    fig, ax = plt.subplots()
+                    ax.imshow(data, cmap='gray', origin='lower', vmin=np.percentile(data, 5), vmax=np.percentile(data, 95))
+                    ax.set_title("FITS 이미지")
+                    st.pyplot(fig)
+                else:
+                    st.warning(f"이미지 차원: {data.ndim}D. 2D 데이터만 시각화됩니다.")
+            else:
+                st.info("이미지 데이터 없음.")
 
-        if not found:
-            st.warning("⚠️ 2차원 이미지 데이터가 포함된 HDU가 없습니다.")
-except Exception as e:
-    st.error(f"❌ 오류 발생: {e}")
+    except Exception as e:
+        st.error(f"FITS 파일을 여는 중 오류 발생: {e}")
+
+    # 임시 파일 삭제
+    if os.path.exists(temp_path):
+        os.remove(temp_path)
