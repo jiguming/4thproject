@@ -15,7 +15,6 @@ from datetime import datetime
 
 # --- Streamlit 앱 페이지 설정 ---
 
-st.set_page_config(page_title="천문 이미지 분석기", layout="wide")
 
 st.title("🔭 천문 이미지 처리 앱")
 
